@@ -1,9 +1,9 @@
-torch>=2.4.0
-opencv-python-headless>=4.9.0.80
+torch==2.5.1
+opencv-python-headless==4.10.0.84
 diffusers==0.31.0
-transformers>=4.49.0,<5
-tokenizers>=0.20.3
-ftfy
-regex
-numpy>=1.23.5,<2
+transformers==4.49.0
+tokenizers==0.21.4
+ftfy==6.3.1
+regex==2026.9.3
+numpy==1.26.4
 einops==0.8.1
