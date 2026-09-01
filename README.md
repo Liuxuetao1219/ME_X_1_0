@@ -10,6 +10,12 @@ Clean50 training included an additionally collected three-axis tactile force arr
 
 Training support: eval-only (training release ETA: TBD).
 
+## Usage
+
+ME-X-1.0 is evaluated through the XPolicyLab `ME_X_1_0` adapter. Installation,
+checkpoint preparation, and RoboTwin evaluation commands are documented in the
+adapter README.
+
 ## Third-party code
 
 The minimal WAN runtime under `runtime/wan/` is derived from [Wan2.2](https://github.com/Wan-Video/Wan2.2) and retains its original copyright headers.
