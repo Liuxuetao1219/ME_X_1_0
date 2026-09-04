@@ -16,37 +16,62 @@ adapter README.
 
 ## Training
 
-Install the runtime and training dependencies:
+The released run used Python 3.10, BF16, and 32 GPUs. Install the dependencies:
 
 ```bash
 pip install -r runtime/requirements.txt
 pip install -r training/requirements.txt
 ```
 
-Download [Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B), the [Motus Stage 2 checkpoint](https://huggingface.co/motus-robotics/Motus), and `tactile_ae.pt` from the ME-X-1.0 checkpoint repository.
+Download the Clean50 tactile dataset:
+
+```bash
+hf download liuxuetao/ME-X-1.0-RoboTwin-Clean50-Tactile \
+  --repo-type dataset \
+  --local-dir datasets/ME-X-1.0-RoboTwin-Clean50-Tactile
+```
+
+Download the model initialization and WAN assets:
+
+```bash
+hf download liuxuetao/ME-X-1.0-RoboTwin-Clean2Random-Leaderboard \
+  tactile_ae.pt \
+  --local-dir checkpoints/ME-X-1.0-RoboTwin-Clean2Random-Leaderboard
+
+hf download motus-robotics/Motus \
+  mp_rank_00_model_states.pt \
+  --local-dir checkpoints/Motus
+
+hf download Wan-AI/Wan2.2-TI2V-5B \
+  config.json \
+  Wan2.2_VAE.pth \
+  models_t5_umt5-xxl-enc-bf16.pth \
+  google/umt5-xxl/special_tokens_map.json \
+  google/umt5-xxl/spiece.model \
+  google/umt5-xxl/tokenizer.json \
+  google/umt5-xxl/tokenizer_config.json \
+  --local-dir checkpoints/Wan2.2-TI2V-5B
+```
 
 Clean50 uses 2,500 HDF5 episodes from 50 tasks. Camera arrays are read in BGR order without mean/std normalization. The action targets are raw joint positions at `t+3, t+6, ..., t+48`; video targets are at `t+6, t+12, ..., t+48`.
 
-Build the quality manifest and cached T5 embeddings:
+The dataset includes `quality_manifest.json.gz`. Build the cached T5 embeddings:
 
 ```bash
-python training/prepare_data.py \
-  --data-root /path/to/ME-X-1.0-RoboTwin-Clean50 \
-  --output /path/to/quality_manifest.json.gz
-
 python training/cache_text.py \
-  --data-root /path/to/ME-X-1.0-RoboTwin-Clean50 \
-  --wan /path/to/Wan2.2-TI2V-5B \
-  --output /path/to/t5_prompt_table.pt
+  --data-root datasets/ME-X-1.0-RoboTwin-Clean50-Tactile \
+  --wan checkpoints/Wan2.2-TI2V-5B \
+  --output datasets/ME-X-1.0-RoboTwin-Clean50-Tactile/t5_prompt_table.pt
 ```
 
-Set the paths in `configs/train_clean50.yaml`, prepare a DeepSpeed hostfile for 32 GPUs, and run:
+The default paths in `configs/train_clean50.yaml` match the commands above. Create a DeepSpeed hostfile for two 16-GPU nodes and run:
 
 ```bash
-HOSTFILE=/path/to/hostfile bash train.sh
+printf 'node0 slots=16\nnode1 slots=16\n' > hostfile
+HOSTFILE=hostfile bash train.sh
 ```
 
-The released run used BF16, a per-GPU batch size of 4, a global batch size of 128, and 50,000 optimizer steps.
+Replace `node0` and `node1` with resolvable hostnames. The per-GPU batch size is 4, the global batch size is 128, and training runs for 50,000 optimizer steps.
 
 ## Third-party code
 
