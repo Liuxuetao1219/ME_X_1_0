@@ -1,12 +1,21 @@
 # ME-X-1.0
 
-ME-X-1.0 is a video-action-tactile policy trained on RoboTwin Clean50.
+ME-X-1.0 is a video-action-tactile policy trained on RoboTwin Clean50. This
+repository contains its inference runtime and the training code for the
+released checkpoint.
 
 Model weights are available at [liuxuetao/ME-X-1.0-RoboTwin-Clean2Random-Leaderboard](https://huggingface.co/liuxuetao/ME-X-1.0-RoboTwin-Clean2Random-Leaderboard). The runtime also uses the VAE, T5 encoder, tokenizer, and config from [Wan-AI/Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B).
 
 XPolicyLab supplies RGB observations. Set `input_color_order: bgr` for this checkpoint so the runtime performs the single RGB-to-BGR conversion expected by training. The runtime does not apply mean/std image normalization.
 
 Clean50 training included an additionally collected three-axis tactile force array. RoboTwin leaderboard evaluation has no tactile observation, so the two observed tactile frames are set to zero.
+
+## Repository structure
+
+- `runtime/`: ME-X-1.0 model and inference runtime.
+- `training/`: Clean50 dataset loader and distributed training entry point.
+- `configs/`: released training and DeepSpeed configurations.
+- `train.sh`: 32-GPU training launcher.
 
 ## Evaluation
 
@@ -16,9 +25,12 @@ adapter README.
 
 ## Training
 
-The released run used Python 3.10, BF16, and 32 GPUs. Install the dependencies:
+The released run used Python 3.10, BF16, and 32 GPUs. Create the environment and
+install the dependencies:
 
 ```bash
+conda create -n me-x python=3.10 -y
+conda activate me-x
 pip install -r runtime/requirements.txt
 pip install -r training/requirements.txt
 ```
@@ -30,6 +42,9 @@ hf download liuxuetao/ME-X-1.0-RoboTwin-Clean50-Tactile \
   --repo-type dataset \
   --local-dir datasets/ME-X-1.0-RoboTwin-Clean50-Tactile
 ```
+
+The dataset includes the 2,500 episodes, instruction metadata, quality
+manifest, and the Clean50-only T5 embedding cache used by the released run.
 
 Download the model initialization and WAN assets:
 
@@ -54,15 +69,6 @@ hf download Wan-AI/Wan2.2-TI2V-5B \
 ```
 
 Clean50 uses 2,500 HDF5 episodes from 50 tasks. Camera arrays are read in BGR order without mean/std normalization. The action targets are raw joint positions at `t+3, t+6, ..., t+48`; video targets are at `t+6, t+12, ..., t+48`.
-
-The dataset includes `quality_manifest.json.gz`. Build the cached T5 embeddings:
-
-```bash
-python training/cache_text.py \
-  --data-root datasets/ME-X-1.0-RoboTwin-Clean50-Tactile \
-  --wan checkpoints/Wan2.2-TI2V-5B \
-  --output datasets/ME-X-1.0-RoboTwin-Clean50-Tactile/t5_prompt_table.pt
-```
 
 The default paths in `configs/train_clean50.yaml` match the commands above. Create a DeepSpeed hostfile for two 16-GPU nodes and run:
 
