@@ -69,7 +69,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     opener = gzip.open if args.output.suffix == ".gz" else open
     with opener(args.output, "wt", encoding="utf-8") as stream:
-        json.dump({"format": "ME-X-1.0-Clean50", "episodes": episodes}, stream)
+        json.dump({"format": "MachEmbodied-Dex1.0-Clean50", "episodes": episodes}, stream)
 
 
 if __name__ == "__main__":

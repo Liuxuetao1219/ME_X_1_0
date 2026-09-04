@@ -1,5 +1,5 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
-# Modified for ME-X-1.0.
+# Modified for MachEmbodied-Dex1.0.
 import math
 
 import torch
@@ -164,7 +164,7 @@ class WanSelfAttention(nn.Module):
 
         q, k, v = qkv_fn(x)
 
-        # Joint ME-X-1.0 branch: video + action + tactile.
+        # Joint MachEmbodied-Dex1.0 branch: video + action + tactile.
         if action_q is not None or tactile_q is not None:
             L_x = q.size(1)
 

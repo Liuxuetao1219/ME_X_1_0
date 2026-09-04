@@ -1,4 +1,4 @@
-"""Image preprocessing used by ME-X-1.0 inference."""
+"""Image preprocessing used by MachEmbodied-Dex1.0 inference."""
 
 from typing import Tuple
 

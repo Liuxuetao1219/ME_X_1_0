@@ -1,4 +1,4 @@
-"""ME-X-1.0 action expert used by the inference runtime."""
+"""MachEmbodied-Dex1.0 action expert used by the inference runtime."""
 
 import torch
 import torch.nn as nn

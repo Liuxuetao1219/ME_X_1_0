@@ -1,1 +1,1 @@
-"""ME-X-1.0 model components."""
+"""MachEmbodied-Dex1.0 model components."""

@@ -1,4 +1,4 @@
-"""ME-X-1.0 video-action-tactile model used by the evaluation runtime."""
+"""MachEmbodied-Dex1.0 video-action-tactile model."""
 
 import math
 import torch
@@ -39,8 +39,8 @@ def build_flowmatch_sigma_schedule(
 
 
 @dataclass
-class MEXConfig:
-    """Architecture and flow-matching settings for ME-X-1.0."""
+class MachEmbodiedDexConfig:
+    """Architecture and flow-matching settings for MachEmbodied-Dex1.0."""
 
     vae_path: str = ""
     wan_config_path: str = ""
@@ -186,7 +186,7 @@ class VideoModule(nn.Module):
         action_block: nn.Module,
         tactile_block: nn.Module,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """ME-X-1.0 all-to-all Video-Action-Tactile attention in one WAN call."""
+        """MachEmbodied-Dex1.0 all-to-all Video-Action-Tactile attention in one WAN call."""
         wan_layer = self.video_model.wan_model.blocks[layer_idx]
         v_mod = video_adaln_modulation
         a_mod = action_adaln_modulation
@@ -321,10 +321,10 @@ class ActionModule(nn.Module):
         return action_tokens
 
 
-class MEXModel(nn.Module):
-    """ME-X-1.0 video-action-tactile flow-matching model."""
+class MachEmbodiedDexModel(nn.Module):
+    """MachEmbodied-Dex1.0 video-action-tactile flow-matching model."""
 
-    def __init__(self, config: MEXConfig):
+    def __init__(self, config: MachEmbodiedDexConfig):
         super().__init__()
         self.config = config
         self.dtype = torch.bfloat16
@@ -431,7 +431,7 @@ class MEXModel(nn.Module):
         tactile_observed_frame_times: torch.Tensor,
         tactile_future_query_times: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
-        """Compute the three ME-X-1.0 flow-matching losses."""
+        """Compute the three MachEmbodied-Dex1.0 flow-matching losses."""
         batch = video_frames.shape[0]
         first_frame = first_frame.to(self.device, dtype=self.dtype)
         video_frames = video_frames.to(self.device, dtype=self.dtype)
@@ -545,7 +545,7 @@ class MEXModel(nn.Module):
         action_timestep: torch.Tensor,
         tactile_timestep: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Run one ME-X-1.0 Full-Joint V-A-T flow-velocity evaluation."""
+        """Run one MachEmbodied-Dex1.0 Full-Joint V-A-T flow-velocity evaluation."""
         batch_size = int(video_latent.shape[0])
         video_tokens = self.video_module.prepare_input(video_latent.to(self.dtype))
         registers = (

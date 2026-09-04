@@ -26,7 +26,7 @@ def _install_numpy_pickle_compat() -> None:
 _install_numpy_pickle_compat()
 
 from checkpoint import load_metadata, load_model_state_strictly
-from models.me_x import MEXConfig, MEXModel
+from models.mach_embodied_dex import MachEmbodiedDexConfig, MachEmbodiedDexModel
 from utils.image_utils import resize_with_padding
 from wan.modules.t5 import T5EncoderModel
 
@@ -34,8 +34,8 @@ from wan.modules.t5 import T5EncoderModel
 logger = logging.getLogger(__name__)
 
 
-class MEXPolicy:
-    """Single-version ME-X-1.0 inference runtime.
+class MachEmbodiedDexPolicy:
+    """Single-version MachEmbodied-Dex1.0 inference runtime.
 
     The runtime accepts RGB camera arrays, supports an explicit BGR checkpoint
     compatibility mode, and supplies two physical-zero tactile frames because
@@ -51,7 +51,7 @@ class MEXPolicy:
         input_color_order: str = "rgb",
     ) -> None:
         if not torch.cuda.is_available():
-            raise RuntimeError("ME-X-1.0 requires CUDA")
+            raise RuntimeError("MachEmbodied-Dex1.0 requires CUDA")
         self.device = torch.device("cuda")
         self.wan_path = Path(wan_path).expanduser().resolve()
         self.metadata = load_metadata(checkpoint_path)
@@ -74,14 +74,14 @@ class MEXPolicy:
         self.current_state: torch.Tensor | None = None
         self.current_instruction: str | None = None
 
-    def _build_model(self) -> MEXModel:
+    def _build_model(self) -> MachEmbodiedDexModel:
         cfg = self.config
         common = cfg["common"]
         action = cfg["action_expert"]
         tactile = cfg["model"]["tactile"]
         wan = cfg["model"]["wan"]
-        model = MEXModel(
-            MEXConfig(
+        model = MachEmbodiedDexModel(
+            MachEmbodiedDexConfig(
                 vae_path=str(self.wan_path / "Wan2.2_VAE.pth"),
                 wan_config_path=str(self.wan_path),
                 video_precision=str(wan.get("precision", "bfloat16")),
@@ -103,7 +103,7 @@ class MEXPolicy:
         report = load_model_state_strictly(model, self.metadata)
         model.eval()
         model.tactile_codec.assert_frozen()
-        logger.info("Loaded ME-X-1.0 strictly: %s", report)
+        logger.info("Loaded MachEmbodied-Dex1.0 strictly: %s", report)
         return model
 
     def update_observation(
@@ -115,7 +115,7 @@ class MEXPolicy:
         qpos: np.ndarray,
         instruction: str,
     ) -> None:
-        # The ME-X-1.0 training/deployment camera mosaic uses a 320x240 head
+        # The MachEmbodied-Dex1.0 training/deployment camera mosaic uses a 320x240 head
         # frame above two 160x120 wrist frames.  XPolicyLab observations may
         # expose the native 640x480 head stream, so restore the trained camera
         # contract before assembling the mosaic.
@@ -185,7 +185,7 @@ class MEXPolicy:
                 **self._zero_tactile(),
             )
         if tuple(actions.shape) != (1, 16, 14) or not torch.isfinite(actions).all().item():
-            raise RuntimeError(f"Invalid ME-X-1.0 action tensor: {tuple(actions.shape)}")
+            raise RuntimeError(f"Invalid MachEmbodied-Dex1.0 action tensor: {tuple(actions.shape)}")
         return actions[0].float().cpu().numpy()
 
     def reset(self) -> None:

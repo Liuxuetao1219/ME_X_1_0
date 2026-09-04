@@ -14,7 +14,7 @@ from .tactile_autoencoder import (
 class TactileAE:
     """Immutable V3 TacAE encoder and the audited RoboTwin physical contract.
 
-    The codec is intentionally not registered as a ME-X-1.0 submodule because
+    The codec is intentionally not registered as a MachEmbodied-Dex1.0 submodule because
     its frozen weights are loaded from ``tactile_ae.pt``.
     """
 
@@ -31,7 +31,7 @@ class TactileAE:
         if schema.get("architecture") != "universal_anatomy_tactile_ae_v3":
             raise ValueError(f"Unexpected tactile codec schema: {schema}")
         if schema.get("latent_frame") != "[B,12,256]" or schema.get("time_compression") is not False:
-            raise ValueError("ME-X-1.0 requires the non-temporal [B,12,256] V3 codec")
+            raise ValueError("MachEmbodied-Dex1.0 requires the non-temporal [B,12,256] V3 codec")
         config = AnatomyTactileAEV3Config(**schema["config"])
         model = AnatomyEncoderV3(config)
         weights = state.get("ema", {}).get("shadow")

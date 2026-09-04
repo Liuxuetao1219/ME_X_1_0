@@ -1,5 +1,5 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
-# Modified for ME-X-1.0.
+# Modified for MachEmbodied-Dex1.0.
 import logging
 
 import torch

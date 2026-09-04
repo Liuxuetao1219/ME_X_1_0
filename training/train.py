@@ -1,4 +1,4 @@
-"""Distributed Clean50 training entry point for ME-X-1.0."""
+"""Distributed Clean50 training entry point for MachEmbodied-Dex1.0."""
 
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ from torch.utils.data import DataLoader, DistributedSampler
 ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(ROOT / "runtime"))
 
-from models.me_x import MEXConfig, MEXModel  # noqa: E402
+from models.mach_embodied_dex import MachEmbodiedDexConfig, MachEmbodiedDexModel  # noqa: E402
 from training.data import Clean50Dataset, collate, worker_init  # noqa: E402
 
 
-LOG = logging.getLogger("me_x.train")
+LOG = logging.getLogger("mach_embodied_dex.train")
 
 
 class LinearSchedule:
@@ -55,12 +55,12 @@ class LinearSchedule:
         self.step_count = int(state["step_count"])
 
 
-def model_from_config(config: dict, local_rank: int) -> MEXModel:
+def model_from_config(config: dict, local_rank: int) -> MachEmbodiedDexModel:
     torch.cuda.set_device(local_rank)
     model_cfg = config["model"]
     paths = config["paths"]
-    return MEXModel(
-        MEXConfig(
+    return MachEmbodiedDexModel(
+        MachEmbodiedDexConfig(
             vae_path=str(Path(paths["wan"]) / "Wan2.2_VAE.pth"),
             wan_config_path=paths["wan"],
             video_precision="bfloat16",
@@ -77,7 +77,7 @@ def model_from_config(config: dict, local_rank: int) -> MEXModel:
     )
 
 
-def load_initial_weights(model: MEXModel, path: str) -> None:
+def load_initial_weights(model: MachEmbodiedDexModel, path: str) -> None:
     checkpoint = torch.load(path, map_location="cpu", weights_only=False, mmap=True)
     source = checkpoint.get("module", checkpoint) if isinstance(checkpoint, Mapping) else None
     if not isinstance(source, Mapping):
@@ -102,7 +102,7 @@ def load_initial_weights(model: MEXModel, path: str) -> None:
     LOG.info("Loaded %d WAN and Action DiT tensors", len(selected))
 
 
-def build_optimizer(model: MEXModel, config: dict) -> torch.optim.Optimizer:
+def build_optimizer(model: MachEmbodiedDexModel, config: dict) -> torch.optim.Optimizer:
     training = config["training"]
     wan = [parameter for parameter in model.video_model.wan_model.parameters() if parameter.requires_grad]
     tactile = [parameter for parameter in model.tactile_expert.parameters() if parameter.requires_grad]

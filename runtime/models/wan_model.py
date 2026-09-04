@@ -1,4 +1,4 @@
-"""WAN video backbone and VAE wrapper for ME-X-1.0 inference."""
+"""WAN video backbone and VAE wrapper for MachEmbodied-Dex1.0 inference."""
 
 import torch
 import torch.nn as nn
@@ -81,7 +81,7 @@ class WanVideoModel(nn.Module):
         device: str = "cuda",
         precision: str = "bfloat16"
     ) -> 'WanVideoModel':
-        """Initialize WAN and VAE; ME-X weights are loaded by checkpoint.py."""
+        """Initialize WAN and VAE; model weights are loaded by checkpoint.py."""
         # Load WAN model config
         config_json_path = os.path.join(config_path, 'config.json')
         if not os.path.exists(config_json_path):

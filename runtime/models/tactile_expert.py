@@ -1,4 +1,4 @@
-"""Tactile expert used by ME-X-1.0 joint attention."""
+"""Tactile expert used by MachEmbodied-Dex1.0 joint attention."""
 
 from __future__ import annotations
 
@@ -65,10 +65,10 @@ class UniversalTactileExpertConfig:
         )
         if contract != (256, 18, 12, 2):
             raise ValueError(
-                f"ME-X-1.0 requires tactile latent contract (256,18,12,2), got {contract}"
+                f"MachEmbodied-Dex1.0 requires tactile latent contract (256,18,12,2), got {contract}"
             )
         if self.hidden_size != 512:
-            raise ValueError("ME-X-1.0 tactile expert requires hidden_size=512")
+            raise ValueError("MachEmbodied-Dex1.0 tactile expert requires hidden_size=512")
 
     @property
     def future_slices(self) -> int:

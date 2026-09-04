@@ -1,1 +1,1 @@
-"""ME-X-1.0 runtime utilities."""
+"""MachEmbodied-Dex1.0 runtime utilities."""

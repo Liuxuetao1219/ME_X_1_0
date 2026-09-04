@@ -1,14 +1,14 @@
 paths:
   wan: checkpoints/Wan2.2-TI2V-5B
-  tactile_ae: checkpoints/ME-X-1.0-RoboTwin-Clean2Random-Leaderboard/tactile_ae.pt
+  tactile_ae: checkpoints/MachEmbodied-Dex1.0-RoboTwin-Clean2Random-Leaderboard/tactile_ae.pt
   initial_checkpoint: checkpoints/Motus/mp_rank_00_model_states.pt
   deepspeed_config: configs/zero1.json
-  output: outputs/me_x_1_0_clean50
+  output: outputs/mach_embodied_dex1_0_clean50
 
 data:
-  root: datasets/ME-X-1.0-RoboTwin-Clean50-Tactile
-  text_cache: datasets/ME-X-1.0-RoboTwin-Clean50-Tactile/t5_prompt_table.pt
-  quality_manifest: datasets/ME-X-1.0-RoboTwin-Clean50-Tactile/quality_manifest.json.gz
+  root: datasets/MachEmbodied-Dex1.0-RoboTwin-Clean50-Tactile
+  text_cache: datasets/MachEmbodied-Dex1.0-RoboTwin-Clean50-Tactile/t5_prompt_table.pt
+  quality_manifest: datasets/MachEmbodied-Dex1.0-RoboTwin-Clean50-Tactile/quality_manifest.json.gz
   samples_per_episode: 10
   num_workers: 8
 

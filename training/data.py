@@ -53,7 +53,7 @@ class TextEmbeddingCache:
 
 
 class Clean50Dataset(Dataset):
-    """Samples the exact c+3..c+48 ME-X-1.0 temporal contract."""
+    """Samples the exact c+3..c+48 MachEmbodied-Dex1.0 temporal contract."""
 
     def __init__(
         self,
