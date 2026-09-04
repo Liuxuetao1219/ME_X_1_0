@@ -1,0 +1,44 @@
+paths:
+  wan: /path/to/Wan2.2-TI2V-5B
+  tactile_ae: /path/to/tactile_ae.pt
+  initial_checkpoint: /path/to/Motus/mp_rank_00_model_states.pt
+  deepspeed_config: configs/zero1.json
+  output: outputs/me_x_1_0_clean50
+
+data:
+  root: /path/to/ME-X-1.0-RoboTwin-Clean50
+  text_cache: /path/to/t5_prompt_table.pt
+  quality_manifest: /path/to/quality_manifest.json.gz
+  samples_per_episode: 10
+  num_workers: 8
+
+model:
+  schedule_shift: 5.0
+  loss_weights:
+    video: 1.0
+    action: 1.0
+    tactile: 1.0
+  tactile_expert:
+    initialization_seed: 42042
+    latent_dim: 256
+    latent_slices: 18
+    queries_per_slice: 12
+    condition_slices: 2
+    hidden_size: 512
+    ffn_multiplier: 4
+    wan_num_heads: 24
+    wan_head_dim: 128
+    norm_eps: 1.0e-6
+    freq_dim: 256
+
+training:
+  seed: 42
+  batch_size: 4
+  world_size: 32
+  max_steps: 50000
+  warmup_steps: 1000
+  learning_rate: 5.0e-5
+  wan_learning_rate: 1.0e-5
+  tactile_learning_rate: 1.0e-5
+  weight_decay: 0.01
+  save_every: 10000

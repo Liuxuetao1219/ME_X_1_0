@@ -40,7 +40,7 @@ def build_flowmatch_sigma_schedule(
 
 @dataclass
 class MEXConfig:
-    """Architecture settings required to instantiate the released checkpoint."""
+    """Architecture and flow-matching settings for ME-X-1.0."""
 
     vae_path: str = ""
     wan_config_path: str = ""
@@ -58,6 +58,12 @@ class MEXConfig:
     batch_size: int = 1
     tactile_vae_checkpoint_path: str = ""
     tactile_expert_config: Optional[Dict[str, Any]] = None
+    video_loss_weight: float = 1.0
+    action_loss_weight: float = 1.0
+    tactile_loss_weight: float = 1.0
+    video_train_schedule_shift: float = 5.0
+    action_train_schedule_shift: float = 5.0
+    tactile_train_schedule_shift: float = 5.0
 
     def __post_init__(self):
         """Normalize the one numeric value commonly parsed from JSON."""
@@ -316,7 +322,7 @@ class ActionModule(nn.Module):
 
 
 class MEXModel(nn.Module):
-    """Released ME-X-1.0 video-action-tactile inference model."""
+    """ME-X-1.0 video-action-tactile flow-matching model."""
 
     def __init__(self, config: MEXConfig):
         super().__init__()
@@ -393,6 +399,140 @@ class MEXModel(nn.Module):
         super().train(mode)
         self.tactile_codec.model.eval()
         return self
+
+    @staticmethod
+    def _sample_training_sigma(
+        batch_size: int,
+        shift: float,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        """Sample the shifted uniform flow-matching schedule used for training."""
+        distribution = torch.linspace(0.0001, 0.9999, 10_000, device=device)
+        target = distribution[
+            torch.randint(0, distribution.numel(), (batch_size,), device=device)
+        ]
+        nodes = torch.linspace(1.0, 0.0, 1001, device=device)[:-1]
+        nodes = shift * nodes / (1 + (shift - 1) * nodes)
+        nearest = (nodes[:, None] - target[None]).abs().argmin(dim=0)
+        return nodes[nearest].to(dtype=dtype)
+
+    def training_step(
+        self,
+        *,
+        first_frame: torch.Tensor,
+        video_frames: torch.Tensor,
+        state: torch.Tensor,
+        actions: torch.Tensor,
+        language_embeddings: torch.Tensor,
+        tactile_observed_source: torch.Tensor,
+        tactile_future_source: torch.Tensor,
+        tactile_observed_frame_times: torch.Tensor,
+        tactile_future_query_times: torch.Tensor,
+    ) -> Dict[str, torch.Tensor]:
+        """Compute the three ME-X-1.0 flow-matching losses."""
+        batch = video_frames.shape[0]
+        first_frame = first_frame.to(self.device, dtype=self.dtype)
+        video_frames = video_frames.to(self.device, dtype=self.dtype)
+        state = state.to(self.device, dtype=self.dtype)
+        actions = actions.to(self.device, dtype=self.dtype)
+        language_embeddings = language_embeddings.to(self.device, dtype=self.dtype)
+
+        first = (first_frame * 2.0 - 1.0).unsqueeze(2)
+        future = (video_frames * 2.0 - 1.0).permute(0, 2, 1, 3, 4)
+        with torch.no_grad():
+            clean_video = self.video_model.encode_video(
+                torch.cat((first, future), dim=2).to(self.dtype)
+            )
+            condition_video = self.video_model.encode_video(first.to(self.dtype))
+
+        video_sigma = self._sample_training_sigma(
+            batch,
+            self.config.video_train_schedule_shift,
+            device=self.device,
+            dtype=self.dtype,
+        )
+        video_noise = torch.randn_like(clean_video, dtype=self.dtype)
+        video_sigma_view = video_sigma.view(batch, 1, 1, 1, 1)
+        noisy_video = clean_video * (1 - video_sigma_view) + video_noise * video_sigma_view
+        noisy_video[:, :, :1] = condition_video
+        video_target = video_noise - clean_video
+        video_target[:, :, :1] = 0
+
+        action_sigma = self._sample_training_sigma(
+            batch,
+            self.config.action_train_schedule_shift,
+            device=self.device,
+            dtype=self.dtype,
+        )
+        action_noise = torch.randn_like(actions, dtype=self.dtype)
+        action_sigma_view = action_sigma.view(batch, 1, 1)
+        noisy_actions = actions * (1 - action_sigma_view) + action_noise * action_sigma_view
+        action_target = action_noise - actions
+
+        self.tactile_codec.assert_frozen()
+        with torch.no_grad():
+            clean_tactile, _ = self.tactile_codec.encode_raw(
+                tactile_observed_source.to(self.device),
+                tactile_future_source.to(self.device),
+                observed_frame_times=tactile_observed_frame_times.to(self.device),
+                future_query_times=tactile_future_query_times.to(self.device),
+            )
+            clean_tactile = clean_tactile.to(dtype=self.dtype)
+        condition_slices = self.tactile_expert.config.condition_slices
+        tactile_sigma = self._sample_training_sigma(
+            batch,
+            self.config.tactile_train_schedule_shift,
+            device=self.device,
+            dtype=self.dtype,
+        )
+        tactile_sigma_view = tactile_sigma.view(batch, 1, 1, 1)
+        tactile_noise = torch.randn_like(
+            clean_tactile[:, condition_slices:], dtype=self.dtype
+        )
+        noisy_tactile = clean_tactile[:, condition_slices:] * (
+            1 - tactile_sigma_view
+        ) + tactile_noise * tactile_sigma_view
+        tactile_target = tactile_noise - clean_tactile[:, condition_slices:]
+
+        video_velocity, action_velocity, tactile_velocity = (
+            self._joint_video_action_tactile_velocity(
+                video_latent=noisy_video,
+                noisy_actions=noisy_actions,
+                tactile_latent=torch.cat(
+                    (clean_tactile[:, :condition_slices], noisy_tactile), dim=1
+                ),
+                state=state,
+                processed_t5_context=self.video_module.preprocess_t5_embeddings(
+                    language_embeddings
+                ),
+                video_timestep=video_sigma.mul(1000),
+                action_timestep=action_sigma.mul(1000),
+                tactile_timestep=tactile_sigma.mul(1000),
+            )
+        )
+        video_velocity = video_velocity.clone()
+        video_velocity[:, :, :1] = 0
+        video_loss = nn.functional.mse_loss(video_velocity, video_target)
+        action_loss = nn.functional.mse_loss(action_velocity, action_target)
+        tactile_loss = nn.functional.mse_loss(
+            tactile_velocity[:, condition_slices:], tactile_target
+        )
+        total_loss = (
+            self.config.video_loss_weight * video_loss
+            + self.config.action_loss_weight * action_loss
+            + self.config.tactile_loss_weight * tactile_loss
+        )
+        return {
+            "loss": total_loss,
+            "video_loss": video_loss.detach(),
+            "action_loss": action_loss.detach(),
+            "tactile_loss": tactile_loss.detach(),
+        }
+
+    def forward(self, **batch: torch.Tensor) -> Dict[str, torch.Tensor]:
+        return self.training_step(**batch)
     def _joint_video_action_tactile_velocity(
         self,
         *,
